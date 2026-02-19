@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AZ-900 BHD Simulator | Open Systems</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
+    <style>
+        :root {
+            --bhd-green: #4cb050;
+            --bhd-blue: #0056b3;
+            --bhd-red: #e53935;
+            --bhd-dark: #2d3436;
+            --bg: #f7f9f7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: var(--bg);
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        #app-container {
+            width: 95%;
+            max-width: 800px;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border-bottom: 8px solid var(--bhd-blue);
+        }
+
+        .header {
+            background: var(--bhd-green);
+            color: white;
+            padding: 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #timer {
+            font-weight: 800;
+            font-family: monospace;
+            font-size: 1.3rem;
+            background: rgba(0, 0, 0, 0.1);
+            padding: 5px 15px;
+            border-radius: 20px;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: #eee;
+        }
+
+        #progress-fill {
+            height: 100%;
+            background: var(--bhd-blue);
+            width: 0%;
+            transition: width 0.4s;
+        }
+
+        .content {
+            padding: 40px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            font-size: 1rem;
+            margin-bottom: 25px;
+            outline: none;
+        }
+
+        .btn-main {
+            background: var(--bhd-green);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 30px;
+            font-weight: bold;
+            font-size: 1.1rem;
+            cursor: pointer;
+            box-shadow: 0 5px 15px rgba(76, 176, 80, 0.3);
+        }
+
+        .option-card {
+            background: #fff;
+            border: 2px solid #eee;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-card:hover:not(.locked) {
+            border-color: var(--bhd-blue);
+            background: #f9fbff;
+        }
+
+        .option-card.selected {
+            border-color: var(--bhd-blue);
+            background: #f0f7ff;
+            font-weight: 600;
+        }
+
+        .option-card.correct {
+            background: #e8f5e9 !important;
+            border-color: var(--bhd-green) !important;
+            color: #2e7d32;
+        }
+
+        .option-card.incorrect {
+            background: #ffebee !important;
+            border-color: var(--bhd-red) !important;
+            color: #c62828;
+        }
+
+        .feedback-area {
+            text-align: center;
+            font-weight: bold;
+            height: 30px;
+            margin: 15px 0;
+            font-size: 1.1rem;
+        }
+
+        .stats-disguised {
+            font-size: 0.65rem;
+            color: #ccc;
+            text-align: center;
+            margin-top: 30px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="app-container" class="animate__animated animate__fadeIn">
+        <div class="header">
+            <h3 style="margin:0">BHD AZ-900 Simulator</h3>
+            <div id="timer" class="hidden">40:00</div>
+        </div>
+        <div class="progress-bar">
+            <div id="progress-fill"></div>
+        </div>
+
+        <div class="content">
+            <div id="screen-intro">
+                <h1 style="color: var(--bhd-blue); text-align: center;">Open Systems Certification</h1>
+                <p style="text-align: center; color: #666; margin-bottom: 30px;">Iniciando simulacro oficial para el
+                    capítulo.</p>
+                <input type="text" id="user-name" placeholder="Nombre del Colaborador">
+                <center><button class="btn-main" onclick="start()">Empezar Examen</button></center>
+            </div>
+
+            <div id="screen-quiz" class="hidden">
+                <div id="q-meta" style="font-weight: bold; color: var(--bhd-blue); margin-bottom: 10px;"></div>
+                <h2 id="q-text" style="margin-top: 0; line-height: 1.3;"></h2>
+                <div id="q-options"></div>
+                <div id="feedback" class="feedback-area"></div>
+                <center><button id="btn-action" class="btn-main" onclick="handleStep()">Verificar Respuesta</button>
+                </center>
+            </div>
+
+            <div id="screen-results" class="hidden">
+                <div style="text-align: center;">
+                    <h2 style="color: var(--bhd-blue)">Resultados de la Validación</h2>
+                    <div id="final-pct" style="font-size: 5rem; font-weight: 900; margin: 20px 0;">0%</div>
+                    <p id="final-summary" style="font-size: 1.2rem; margin-bottom: 30px;"></p>
+                    <button class="btn-main" onclick="download()">Descargar Reporte</button>
+                    <div class="stats-disguised">
+                        ID_NODE: <span id="log-node"></span> |
+                        SYNC_COUNT: <span id="log-sync"></span> |
+                        FRAME_DELAY: <span id="log-delay"></span>ms
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            // 30 Preguntas del PDF original 
+            { q: "¿Qué modelo de gasto requiere una gran inversión inicial en infraestructura física?", a: ["OpEx", "CapEx", "Pay-as-you-go", "Nube Híbrida"], c: 1 },
+            { q: "¿Cuál es la capacidad de la nube para aumentar o disminuir recursos automáticamente?", a: ["Escalabilidad", "Agilidad", "Elasticidad", "Alta Disponibilidad"], c: 2 },
+            { q: "En un modelo laaS, ¿qué gestiona el cliente?", a: ["Hardware", "SO y aplicaciones", "Solo datos", "Todo"], c: 1 },
+            { q: "¿Qué tipo de nube es propiedad de una sola organización?", a: ["Pública", "Híbrida", "Privada", "Comunitaria"], c: 2 },
+            { q: "¿Qué servicio de nube es Microsoft 365?", a: ["laaS", "PaaS", "SaaS", "FaaS"], c: 2 },
+            { q: "¿Cuál es una ventaja de la Nube Pública?", a: ["Control total", "Sin mantenimiento de hardware", "Aislamiento total", "Latencia cero"], c: 1 },
+            { q: "¿Qué modelo permite desplegar apps sin gestionar la infraestructura subyacente?", a: ["laas", "PaaS", "Privada", "Dedicada"], c: 1 },
+            { q: "¿Qué protege contra fallos de un centro de datos completo?", a: ["Regiones", "Grupos de Recursos", "Zonas de Disponibilidad", "Pares de Regiones"], c: 2 },
+            { q: "¿Qué servicio permite ejecutar código basado en eventos (Serverless)?", a: ["VMs", "Azure Functions", "AKS", "Dedicated Host"], c: 1 },
+            { q: "Necesitas orquestar contenedores a gran escala. ¿Qué usas?", a: ["ACI", "AKS", "App Service", "Scale Sets"], c: 1 },
+            { q: "¿Ideal para guardar grandes cantidades de datos no estructurados?", a: ["Files", "Blob Storage", "Disk", "Queue"], c: 1 },
+            { q: "¿Función principal de 'Azure Region Pairs'?", a: ["Velocidad", "Replicación para recuperación ante desastres", "Peering", "Ahorro"], c: 1 },
+            { q: "¿Tier más barato para backups a largo plazo?", a: ["Hot", "Cool", "Archive", "Premium"], c: 2 },
+            { q: "¿Distribuye tráfico para evitar sobrecargas en VMs?", a: ["Firewall", "Load Balancer", "VPN", "DNS"], c: 1 },
+            { q: "¿Bloquea tráfico a nivel de IP y puerto en subredes?", a: ["App Gateway", "DDoS", "Network Security Group (NSG)", "Sentinel"], c: 2 },
+            { q: "¿Conexión privada que NO pasa por el internet público?", a: ["VPN", "Express Route", "VNet Peering", "Load Balancer"], c: 1 },
+            { q: "En responsabilidad compartida, ¿quién responde SIEMPRE por los datos?", a: ["Microsoft", "Gobierno", "Cliente", "ISP"], c: 2 },
+            { q: "¿Servicio de identidad con SSO y MFA?", a: ["AD DS", "Entra ID", "Policy", "Key Vault"], c: 1 },
+            { q: "¿Evita que un recurso sea borrado accidentalmente?", a: ["Policy", "Resource Locks", "RBAC", "Monitor"], c: 1 },
+            { q: "¿Define un conjunto estándar de recursos y políticas?", a: ["Azure Blueprints", "Advisor", "Groups", "Arc"], c: 0 },
+            { q: "¿Verifica cumplimiento de normas como ISO/GDPR?", a: ["Compliance Manager", "TCO", "Monitor", "Watcher"], c: 0 },
+            { q: "¿Gestiona acceso mediante roles (Lector, Propietario)?", a: ["RBAC", "Locks", "Policy", "AD"], c: 0 },
+            { q: "¿Calculadora para comparar on-premise vs Azure?", a: ["Pricing", "TCO Calculator", "Cost Management", "Advisor"], c: 1 },
+            { q: "¿Qué significa un SLA de 99.9%?", a: ["Descuento", "Garantía de Uptime", "Seguridad", "Cobertura"], c: 1 },
+            { q: "¿Qué ocurre con el SLA compuesto al combinar servicios?", a: ["Aumenta", "Igual", "Disminuye", "Anula"], c: 2 },
+            { q: "¿Fase sin SLA para pruebas?", a: ["GA", "Private Preview", "Public Preview", "End"], c: 2 },
+            { q: "¿Da recomendaciones de costo y seguridad gratuitas?", a: ["Monitor", "Azure Advisor", "Health", "Portal"], c: 1 },
+            { q: "¿Gestiona acceso de múltiples suscripciones?", a: ["AD Group", "Management Groups", "VM Set", "Billing"], c: 1 },
+            { q: "¿Factor que afecta directamente el costo?", a: ["Nombre", "Región", "Hora", "Grupo"], c: 1 },
+            { q: "¿Almacena certificados y claves de forma segura?", a: ["Security Center", "Key Vault", "Sentinel", "Information Protection"], c: 1 },
+            // 20 adicionales para llegar a 50
+            { q: "¿Qué servicio es un firewall de aplicaciones web (WAF)?", a: ["Azure Firewall", "Application Gateway", "NSG", "Bastion"], c: 1 },
+            { q: "¿Qué servicio ofrece un escritorio remoto en la nube?", a: ["Bastion", "Azure Virtual Desktop", "DevTest", "App Service"], c: 1 },
+            { q: "¿Cómo se llama el portal de salud global de Azure?", a: ["Service Health", "Monitor", "Advisor", "Security"], c: 0 },
+            { q: "¿Qué servicio de IA permite crear bots de chat?", a: ["Cognitive", "Azure Bot Service", "ML", "Databricks"], c: 1 },
+            { q: "¿Qué base de datos es NoSQL y distribuida globalmente?", a: ["SQL DB", "Cosmos DB", "MySQL", "PostgreSQL"], c: 1 },
+            { q: "¿Qué comando de CLI se usa para iniciar sesión?", a: ["az connect", "az login", "azure signin", "login-az"], c: 1 },
+            { q: "¿Qué herramienta permite ejecutar comandos en el navegador?", a: ["Portal", "Cloud Shell", "VS Code", "Terminal"], c: 1 },
+            { q: "¿Qué servicio protege contra ataques de denegación de servicio?", a: ["Firewall", "DDoS Protection", "Sentinel", "Front Door"], c: 1 },
+            { q: "¿Qué modelo de nube combina local y pública?", a: ["Multi-cloud", "Nube Híbrida", "Privada", "SaaS"], c: 1 },
+            { q: "¿Qué servicio centraliza logs y métricas?", a: ["Advisor", "Azure Monitor", "Log Analytics", "Insights"], c: 1 },
+            { q: "¿Qué es una región en Azure?", a: ["Un solo DC", "Área con centros de datos conectados", "Un país", "Un rack"], c: 1 },
+            { q: "¿Qué servicio migra bases de datos con poco downtime?", a: ["Migrate", "DMA", "Database Migration Service", "Data Box"], c: 2 },
+            { q: "¿Nivel máximo de jerarquía de gestión de suscripciones?", a: ["Suscripción", "Management Groups", "Resource Group", "Tenant"], c: 1 },
+            { q: "¿Qué servicio gestiona identidades externas B2C?", a: ["Entra ID", "External ID", "Policy", "RBAC"], c: 1 },
+            { q: "¿Qué protocolo usa Azure Bastion para conectar a VMs?", a: ["RDP/SSH sobre SSL", "FTP", "HTTP", "Telnet"], c: 0 },
+            { q: "¿Qué herramienta estima el costo mensual previo a crear recursos?", a: ["TCO", "Pricing Calculator", "Advisor", "Cost Management"], c: 1 },
+            { q: "¿Qué servicio ayuda a cumplir con políticas de gobernanza?", a: ["RBAC", "Azure Policy", "Locks", "Monitor"], c: 1 },
+            { q: "¿Qué servicio es una base de datos relacional administrada?", a: ["Cosmos DB", "Azure SQL Database", "Blob", "Table"], c: 1 },
+            { q: "¿Cómo se llama la zona que contiene al menos una región?", a: ["Geografía", "Zona de Disponibilidad", "País", "Continente"], c: 0 },
+            { q: "¿Qué servicio de Azure es una red de entrega de contenido?", a: ["Traffic Manager", "Azure CDN", "Front Door", "Application Gateway"], c: 1 }
+        ];
+
+        let current = 0, score = 0, selected = null, reviewing = false, timeLeft = 40 * 60;
+        let syncCount = 0, frameDelay = 0, blurStart = null, userHistory = [];
+
+        // Auditoría
+        window.onblur = () => { syncCount++; blurStart = Date.now(); };
+        window.onfocus = () => { if (blurStart) frameDelay += Math.round((Date.now() - blurStart) / 1000); };
+
+        function start() {
+            const name = document.getElementById('user-name').value.trim();
+            if (name.length < 3) return alert("Ingrese su nombre.");
+            document.getElementById('screen-intro').classList.add('hidden');
+            document.getElementById('screen-quiz').classList.remove('hidden');
+            document.getElementById('timer').classList.remove('hidden');
+            setInterval(() => {
+                timeLeft--;
+                let m = Math.floor(timeLeft / 60), s = timeLeft % 60;
+                document.getElementById('timer').innerText = `${m}:${s < 10 ? '0' : ''}${s}`;
+                if (timeLeft <= 0) finish();
+            }, 1000);
+            showQ();
+        }
+
+        function showQ() {
+            reviewing = false; selected = null;
+            const q = questions[current];
+            document.getElementById('q-meta').innerText = `DESAFÍO ${current + 1} DE 50`;
+            document.getElementById('q-text').innerText = q.q;
+            document.getElementById('progress-fill').style.width = `${(current / 50) * 100}%`;
+            document.getElementById('feedback').innerText = "";
+            document.getElementById('btn-action').innerText = "Verificar Respuesta";
+            const box = document.getElementById('q-options');
+            box.innerHTML = "";
+            q.a.forEach((opt, i) => {
+                const div = document.createElement('div');
+                div.className = "option-card animate__animated animate__fadeInUp";
+                div.innerText = opt;
+                div.onclick = () => {
+                    if (!reviewing) {
+                        selected = i;
+                        document.querySelectorAll('.option-card').forEach(c => c.classList.remove('selected'));
+                        div.classList.add('selected');
+                    }
+                };
+                box.appendChild(div);
+            });
+        }
+
+        function handleStep() {
+            if (selected === null) return alert("Selecciona una opción.");
+            if (!reviewing) {
+                reviewing = true;
+                const correct = questions[current].c;
+                const cards = document.querySelectorAll('.option-card');
+                cards.forEach((c, i) => {
+                    if (i === correct) c.classList.add('correct');
+                    if (i === selected && i !== correct) c.classList.add('incorrect');
+                });
+                const isOk = selected === correct;
+                if (isOk) score++;
+                userHistory.push({ q: questions[current].q, u: questions[current].a[selected], c: questions[current].a[correct], ok: isOk ? "EXITO" : "FALLO" });
+                document.getElementById('feedback').innerText = isOk ? "¡Correcto!" : "Incorrecto.";
+                document.getElementById('feedback').style.color = isOk ? "var(--bhd-green)" : "var(--bhd-red)";
+                document.getElementById('btn-action').innerText = "Siguiente Pregunta";
+            } else {
+                current++;
+                if (current < 50) showQ(); else finish();
+            }
+        }
+
+        function finish() {
+            document.getElementById('screen-quiz').classList.add('hidden');
+            document.getElementById('screen-results').classList.remove('hidden');
+            const pct = (score / 50 * 100).toFixed(0);
+            const pctEl = document.getElementById('final-pct');
+            pctEl.innerText = pct + "%";
+            pctEl.style.color = pct < 70 ? "var(--bhd-red)" : "var(--bhd-blue)";
+            document.getElementById('log-node').innerText = Math.random().toString(36).substr(7).toUpperCase();
+            document.getElementById('log-sync').innerText = syncCount;
+            document.getElementById('log-delay').innerText = frameDelay * 120;
+            download();
+        }
+
+        function download() {
+            const name = document.getElementById('user-name').value;
+            const wb = XLSX.utils.book_new();
+            const res = [
+                ["AUDITORIA DE SISTEMA - BHD"],
+                ["Nombre", name],
+                ["Puntaje", (score / 50 * 100) + "%"],
+                ["SYNC_COUNT", syncCount],
+                ["FRAME_DELAY (ms)", frameDelay * 120],
+                ["ID_NODE", document.getElementById('log-node').innerText],
+                ["Timestamp", new Date().toLocaleString()]
+            ];
+            const det = userHistory.map((x, i) => ({ "N": i + 1, "Pregunta": x.q, "Respuesta": x.u, "Correcta": x.c, "Estado": x.ok }));
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(res), "Seguridad_Log");
+            XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(det), "Detalle_Respuestas");
+            XLSX.writeFile(wb, `BHD_Reporte_${name.replace(/ /g, '_')}.xlsx`);
+        }
+    </script>
+</body>
+
+</html>
