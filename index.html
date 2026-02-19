@@ -197,7 +197,6 @@
 
     <script>
         const questions = [
-            // 30 Preguntas del PDF original 
             { q: "¿Qué modelo de gasto requiere una gran inversión inicial en infraestructura física?", a: ["OpEx", "CapEx", "Pay-as-you-go", "Nube Híbrida"], c: 1 },
             { q: "¿Cuál es la capacidad de la nube para aumentar o disminuir recursos automáticamente?", a: ["Escalabilidad", "Agilidad", "Elasticidad", "Alta Disponibilidad"], c: 2 },
             { q: "En un modelo laaS, ¿qué gestiona el cliente?", a: ["Hardware", "SO y aplicaciones", "Solo datos", "Todo"], c: 1 },
@@ -254,7 +253,6 @@
         let current = 0, score = 0, selected = null, reviewing = false, timeLeft = 40 * 60;
         let syncCount = 0, frameDelay = 0, blurStart = null, userHistory = [];
 
-        // Auditoría
         window.onblur = () => { syncCount++; blurStart = Date.now(); };
         window.onfocus = () => { if (blurStart) frameDelay += Math.round((Date.now() - blurStart) / 1000); };
 
